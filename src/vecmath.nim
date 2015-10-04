@@ -1,17 +1,17 @@
 ## The MIT License (MIT)
-## 
+##
 ## Copyright (c) 2014 Charlie Barto
-## 
+##
 ## Permission is hereby granted, free of charge, to any person obtaining a copy
 ## of this software and associated documentation files (the "Software"), to deal
 ## in the Software without restriction, including without limitation the rights
 ## to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
 ## copies of the Software, and to permit persons to whom the Software is
 ## furnished to do so, subject to the following conditions:
-## 
+##
 ## The above copyright notice and this permission notice shall be included in all
 ## copies or substantial portions of the Software.
-## 
+##
 ## THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 ## IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
 ## FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
@@ -21,16 +21,16 @@
 ## SOFTWARE.
 import math
 import strutils
-import unsigned
 import private/intrinsic
+{.experimental.}
 type ColMajor = object
 type RowMajor = object
-type Options = generic x
+type Options = concept x
   x is ColMajor or
     x is RowMajor
 type TMatrix*[N: static[int]; M: static[int]; T; O: Options] = object
   data*: array[0..M*N-1, T]
-type 
+type
   SquareMatrix[N: static[int]; T] = TMatrix[N,N,T,ColMajor]
 
 type
@@ -121,24 +121,26 @@ proc dot*(a, b: TVec): TVec.T =
 proc length*(a: TVec): float =
   result = sqrt(dot(a,a).float)
 proc row*(a: TMatrix; i: int): auto =
-  result = TVec[TMatrix.M, TMatrix.T]()
+  var result: TVec[TMatrix.M, TMatrix.T]
   for idx in 1..TMatrix.M:
     result[idx] = a[i,idx]
+  return result
 proc col*(a: TMatrix; j: int): auto =
-  result = TVec[TMatrix.N, TMatrix.T]()
+  var result: TVec[TMatrix.N, TMatrix.T]
   for idx in 1..TMatrix.N:
     result[idx] = a[idx, j]
+  return result
 proc `/`*(a: TMatrix, c: float): TMatrix =
   for i in 1..TMatrix.N:
     for j in 1..TMatrix.M:
       result[i,j] = a[i,j] / c
-proc sub*(self: TMatrix; r,c: int): auto =
+proc sub*[N: static[int]; M: static[int]; T](self: TMatrix[N,M,T,ColMajor]; r,c: int): auto =
   ## returns a submatrix of `self`, that is
   ## we delete the ith row and jth column
   ## and return the resulting matrix
-  result = TMatrix[TMatrix.N - 1, TMatrix.M - 1, TMatrix.T, TMatrix.O]()
-  for i in 1..TMatrix.N-1:
-    for j in 1..TMatrix.M-1:
+  var result: TMatrix[N - 1, M - 1, T, ColMajor]
+  for i in 1..N-1:
+    for j in 1..M-1:
       #we just handle the four cases here
       #we could be in any one of the four quadrents
       #defined by the row and col we are removing
@@ -146,6 +148,7 @@ proc sub*(self: TMatrix; r,c: int): auto =
       elif i >= r: result[i,j] = self[i+1, j]
       elif j >= c: result[i,j] = self[i, j+1]
       else: result[i,j] = self[i,j]
+  return result
 proc transpose*(a: TMatrix): TMatrix =
   for i in 1..TMatrix.N:
     for j in 1..TMatrix.M:
@@ -167,17 +170,24 @@ proc det*(a: TMat3f): float =
     var sgn = pow((-1).float, (i + 1).float)
     result += sgn * a[i,1] * det2(a.sub(i,1))
 """
+proc adj*(a: TMatrix): TMatrix =
+  for i in 1..TMatrix.N:
+    for j in 1..TMatrix.M:
+      var sgn = pow((-1).float, (i+j).float)
+      result[j,i] = sgn * det(a.sub(i,j))
+discard """
 proc adj*(a: TMat4f): TMat4f =
   for i in 1..4:
     for j in 1..4:
       var sgn = pow((-1).float, (i+j).float)
       result[i,j] = sgn * det(a.sub(j,i))
-proc inverse*(a: TMat4f): TMat4f =
-  result = adj(a)/det(a)
+"""
+proc inverse*(a: TMatrix): TMatrix =
+  result = adj(a) / det(a)
 proc trace*(a: SquareMatrix): float =
   for i in 1..SquareMatrix.N:
     result += a[i,i]
-proc initMat3f*(arrs: array[0..8, float32]): TMat3f = 
+proc initMat3f*(arrs: array[0..8, float32]): TMat3f =
   result.data = arrs
   result = transpose(result)
 proc initMat2f*(arrs: array[0..3, float32]): TMat2f =
@@ -187,10 +197,18 @@ proc mat3f*(mat: TMat4f): TMat3f =
   for i in 1..3:
     for j in 1..3:
       result[i,j] = mat[i,j]
+discard """
 proc `$`*(a: TMat3f): string =
   result = formatFloat(a[1,1]) & " " & formatFloat(a[1,2]) & formatFloat(a[1,3]) & "\n" &
            formatFloat(a[2,1]) & " " & formatFloat(a[2,2]) & formatFloat(a[2,3]) & "\n" &
            formatFloat(a[3,1]) & " " & formatFloat(a[3,2]) & formatFloat(a[3,3])
+"""
+proc `$`*(a: TMatrix): string =
+  result = ""
+  for i in 1..TMatrix.N:
+    for j in 1..TMatrix.M:
+      result &= formatFloat(a[i,j]) & " "
+    result &= "\n"
 proc mul*(a: TMat4f; b: TMat4f): TMat4f =
   for i in 1..4:
     for j in 1..4:
@@ -212,8 +230,8 @@ proc mul*(a: TMat3f; b: TMat3f): TMat3f =
     for j in 1..3:
       result[i,j] = dot(row(a,i), col(b,j))
 """
-#proc `==`*(a: TMatrix; b: TMatrix): bool =
-#  result = a.data == b.data
+proc `==`*(a: TMatrix; b: TMatrix): bool =
+  result = a.data == b.data
 proc identity4f*(): TMat4f =
   for i in 1..4:
     result[i,i] = 1'f32
@@ -339,7 +357,7 @@ proc CreateOrthoMatrix*(left, right, bottom, top, near, far: float32): TMat4f =
   result.data = [2/(right - left), 0, 0, 0,
                  0, 2/(top-bottom), 0, 0,
                  0, 0, -2 / (far - near), 0,
-                 -(right + left)/(right - left), -(top+bottom)/(top-bottom), 
+                 -(right + left)/(right - left), -(top+bottom)/(top-bottom),
                  -2 * ((far + near)/(far - near)), 1]
 #quaternion related code
 proc `[]`*(self: TQuatf; i: int): float32 = array[1..4, float32](self)[i]
@@ -598,16 +616,16 @@ proc Precompute_Ray*(ray: TRay): TIntersectRay =
 proc intersects*(r: TIntersectRay, b: TAlignedBox3f): bool =
   case r.class
   of MMM:
-    if (r.x < b.min.x) or (r.y < b.min.y) or (r.z < b.min.z) or 
-      (r.jbyi * b.min.x - b.max.y + r.c_xy > 0) or 
-      (r.ibyj * b.min.y - b.max.x + r.c_yx > 0) or 
-      (r.jbyk * b.min.z - b.max.y + r.c_zy > 0) or 
-      (r.kbyj * b.min.y - b.max.z + r.c_yz > 0) or 
-      (r.kbyi * b.min.x - b.max.z + r.c_xz > 0) or 
+    if (r.x < b.min.x) or (r.y < b.min.y) or (r.z < b.min.z) or
+      (r.jbyi * b.min.x - b.max.y + r.c_xy > 0) or
+      (r.ibyj * b.min.y - b.max.x + r.c_yx > 0) or
+      (r.jbyk * b.min.z - b.max.y + r.c_zy > 0) or
+      (r.kbyj * b.min.y - b.max.z + r.c_yz > 0) or
+      (r.kbyi * b.min.x - b.max.z + r.c_xz > 0) or
       (r.ibyk * b.min.z - b.max.x + r.c_zx > 0): return false
     return true
   of MMP:
-    if (r.x < b.min.x) or (r.y < b.min.y) or (r.z > b.max.z) or 
+    if (r.x < b.min.x) or (r.y < b.min.y) or (r.z > b.max.z) or
       (r.jbyi * b.min.x - b.max.y + r.c_xy > 0) or
       (r.ibyj * b.min.y - b.max.x + r.c_yx > 0) or
       (r.jbyk * b.max.z - b.max.y + r.c_zy > 0) or
@@ -815,8 +833,8 @@ proc frustumContains*(frustum: TMat4f, box: TAlignedBox3f): bool =
         inc(numIn)
     if numIn == 0:
       return false
-    
-      
+
+
 discard """
 const XSwiz = {'x', 'r', 'u' }
 const YSwiz = {'y', 'g', 'v' }
@@ -833,7 +851,7 @@ proc `.`*[N: static[int]; T](self: TVec[N, T]; field: static[string]): TVec[fiel
     if field[i-1] in WSwiz:
       result[i] = self[4]
 """
-#directly graphics related functions, like ports of glu stuff and the like, 
+#directly graphics related functions, like ports of glu stuff and the like,
 proc LookAt*(eye, center, up: TVec3f): TMat4f =
   ## makes a viewing matrix that looks at a given object from a given center
   ## and "up" point, this works like gluLookAt but returns a matrix instead
@@ -851,7 +869,7 @@ proc LookAt*(eye, center, up: TVec3f): TMat4f =
   result[1,2] = up[1]
   result[2,2] = up[2]
   result[3,2] = up[3]
-  
+
   result[1,3] = -1 * forward[1]
   result[2,3] = -1 * forward[2]
   result[3,3] = -1 * forward[3]
@@ -926,13 +944,13 @@ when isMainModule:
     var da = det(a)
     check(da == -2'f32)
   test "TDet3x3f":
-    var a = initMat3f([1'f32, 2'f32, 3'f32, 
+    var a = initMat3f([1'f32, 2'f32, 3'f32,
                        4'f32, 5'f32, 6'f32,
                        7'f32, 8'f32, 9'f32])
     var da = det(a)
     check(da == 0.0)
   test "TAdj3x3":
-    var a = initMat3f([1'f32, 2'f32, 3'f32, 
+    var a = initMat3f([1'f32, 2'f32, 3'f32,
                        4'f32, 5'f32, 6'f32,
                        7'f32, 8'f32, 9'f32])
     var aj = adj(a)
@@ -946,7 +964,20 @@ when isMainModule:
     var mtx = toRotMatrix(rot)
     var newRot = fromRotMatrix(mtx)
     check(newRot == rot)
-  discard """ 
+
+  test "TMatrixInverse4x4":
+    var rot = quatFromAngleAxis(0.5, vec3f(1,0,0))
+    var mtx = toRotMatrix(rot).toAffine()
+    var inv = inverse(mtx)
+    var transpose = transpose(mtx)
+    check(inv == transpose)
+  test "TMatrixInverse3x3":
+    var rot = quatFromAngleAxis(0.5, vec3f(1,0,0))
+    var mtx = toRotMatrix(rot)
+    var inv = inverse(mtx)
+    var trans = transpose(mtx)
+    check(inv == trans)
+  discard """
   test "TSwizzle":
     var ta: TVec3f = TVec3f(data: [1.0'f32, 2.0'f32, 3.0'f32])
     check(ta.xxx == TVec3f(data: [1.0'f32, 1.0'f32, 1.0'f32] ))
@@ -955,5 +986,3 @@ when isMainModule:
   #check(prod[1,2] == 5.0'f32)
   #check(prod[2,1] == 20.0'f32)
   #check(prod[2,2] == 13.0'f32)
-
-
