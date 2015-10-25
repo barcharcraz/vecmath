@@ -3,5 +3,5 @@
 *.exe
 *.pdb
 *.ilk
-*[nimcache]
+*nimcache
 *.swp
