@@ -28,28 +28,46 @@ type RowMajor = object
 type Options = concept x
   x is ColMajor or
     x is RowMajor
-type TMatrix*[N: static[int]; M: static[int]; T; O: Options] = object
+type Matrix*[N: static[int]; M: static[int]; T; O: Options] = object
   data*: array[0..M*N-1, T]
+type TMatrix = Matrix
 type
   SquareMatrix[N: static[int]; T] = TMatrix[N,N,T,ColMajor]
 
 type
-  TVec*[N: static[int]; T] = TMatrix[N, 1, T, ColMajor]
-  TVec3*[T] = TVec[3, T]
-  TVec4*[T] = TVec[4, T]
-  TVecf*[N: static[int]] = TMatrix[N, 1, float32, ColMajor]
-  TMat2*[T] = TMatrix[2,2,T, ColMajor]
-  TMat3*[T] = TMatrix[3,3,T, ColMajor]
-  TMat4*[T] = TMatrix[4,4,T, ColMajor]
-  TMat4f* = TMatrix[4, 4, float32, ColMajor]
-  TMat3f* = TMatrix[3, 3, float32, ColMajor]
-  TMat2f* = TMatrix[2, 2, float32, ColMajor]
-  TVec6f* = TMatrix[6, 1, float32, ColMajor]
-  TVec5f* = TMatrix[5, 1, float32, ColMajor]
-  TVec4f* = TMatrix[4, 1, float32, ColMajor]
-  TVec3f* = TMatrix[3, 1, float32, ColMajor]
-  TVec2f* = TMatrix[2, 1, float32, ColMajor]
-  TQuatf* = distinct array[1..4, float32] #poor man's quaternion
+  Vector*[N: static[int]; T] = Matrix[N, 1, T, ColMajor]
+  Vec3*[T] = Vector[3, T]
+  Vec4*[T] = Vector[4, T]
+  Vecf*[N: static[int]] = Matrix[N, 1, float32, ColMajor]
+  Mat2*[T] = Matrix[2,2,T, ColMajor]
+  Mat3*[T] = Matrix[3,3,T, ColMajor]
+  Mat4*[T] = Matrix[4,4,T, ColMajor]
+  Mat4f* = Matrix[4, 4, float32, ColMajor]
+  Mat3f* = Matrix[3, 3, float32, ColMajor]
+  Mat2f* = Matrix[2, 2, float32, ColMajor]
+  Vec6f* = Matrix[6, 1, float32, ColMajor]
+  Vec5f* = Matrix[5, 1, float32, ColMajor]
+  Vec4f* = Matrix[4, 1, float32, ColMajor]
+  Vec3f* = Matrix[3, 1, float32, ColMajor]
+  Vec2f* = Matrix[2, 1, float32, ColMajor]
+  Quatf* = distinct array[1..4, float32] #poor man's quaternion
+
+  TVec* {.deprecated.} = Vector
+  TVec3* {.deprecated.} = Vec3
+  TVec4* {.deprecated.} = Vec4
+  TVecf* {.deprecated.} = Vecf
+  TMat2* {.deprecated.} = Mat2
+  TMat3* {.deprecated.} = Mat4
+  TMat4* {.deprecated.} = Mat4
+  TMat4f* {.deprecated.} = Mat4f
+  TMat3f* {.deprecated.} = Mat3f
+  TMat2f* {.deprecated.} = Mat2f
+  TVec6f* {.deprecated.} = Vec6f
+  TVec5f* {.deprecated.} = Vec5f
+  TVec4f* {.deprecated.} = Vec4f
+  TVec3f* {.deprecated.} = Vec3f
+  TVec2f* {.deprecated.} = Vec2f
+  TQuatf* {.deprecated.} = Quatf
 type
   TAlignedBox3f* = object
     min*: TVec3f
