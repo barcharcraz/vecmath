@@ -22,12 +22,11 @@
 import math
 import strutils
 import private/intrinsic
+import private/matrixOptions
+import private/dynMatrix
+export private/dynMatrix
 {.experimental.}
-type ColMajor = object
-type RowMajor = object
-type Options = concept x
-  x is ColMajor or
-    x is RowMajor
+
 type Matrix*[N: static[int]; M: static[int]; T; O: Options] = object
   data*: array[0..M*N-1, T]
 type TMatrix = Matrix
