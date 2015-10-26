@@ -32,7 +32,7 @@ type Matrix*[N: static[int]; M: static[int]; T; O: Options] = object
   data*: array[0..M*N-1, T]
 type TMatrix = Matrix
 type
-  SquareMatrix[N: static[int]; T] = TMatrix[N,N,T,ColMajor]
+  SquareMatrix[N: static[int]; T] = Matrix[N,N,T,ColMajor]
 
 type
   Vector*[N: static[int]; T] = Matrix[N, 1, T, ColMajor]
@@ -70,8 +70,8 @@ type
   TQuatf* {.deprecated.} = Quatf
 type
   TAlignedBox3f* = object
-    min*: TVec3f
-    max*: TVec3f
+    min*: Vec3f
+    max*: Vec3f
 type TCornerType* = enum
   ctBottomLeftFloor = 0,
   ctBottomRightFloor = 1,
@@ -86,77 +86,77 @@ type TAxis* = enum
   axisXZ = 2,
   axisXY = 3
 type TRay* = object
-  dir*: TVec3f
-  origin*: TVec3f
-proc `[]=`*(self: var TMatrix; i,j: int; val: TMatrix.T) =
-  when TMatrix.O is RowMajor:
-    var idx = (TMatrix.M * (i-1)) + (j-1)
+  dir*: Vec3f
+  origin*: Vec3f
+proc `[]=`*(self: var Matrix; i,j: int; val: Matrix.T) =
+  when Matrix.O is RowMajor:
+    var idx = (Matrix.M * (i-1)) + (j-1)
     self.data[idx] = val
-  when TMatrix.O is ColMajor:
-    var idx = (TMatrix.N * (j-1)) + (i-1)
+  when Matrix.O is ColMajor:
+    var idx = (Matrix.N * (j-1)) + (i-1)
     self.data[idx] = val
 
-proc `[]`*(self: TMatrix; i,j: int): TMatrix.T =
-  when TMatrix.O is RowMajor:
-    var idx = (TMatrix.M * (i-1)) + (j-1)
+proc `[]`*(self: Matrix; i,j: int): Matrix.T =
+  when Matrix.O is RowMajor:
+    var idx = (Matrix.M * (i-1)) + (j-1)
     result = self.data[idx]
-  when TMatrix.O is ColMajor:
-    var idx = (TMatrix.N * (j-1)) + (i-1)
+  when Matrix.O is ColMajor:
+    var idx = (Matrix.N * (j-1)) + (i-1)
     result = self.data[idx]
-proc `[]`*(self: TVec; i: int): TVec.T =
+proc `[]`*(self: Vector; i: int): Vector.T =
   result = self[i, 1]
-proc `[]=`*(self: var TVec; i: int; val: TVec.T) =
+proc `[]=`*(self: var Vector; i: int; val: Vector.T) =
   self[i, 1] = val
 
-proc vec2f*(x,y: float32): TVec2f =
+proc vec2f*(x,y: float32): Vec2f =
   result.data = [x,y]
-proc vec3f*(x,y,z: float32): TVec3f =
+proc vec3f*(x,y,z: float32): Vec3f =
   result.data = [x,y,z]
-proc vec3f*(vec: TVec4f): TVec3f =
+proc vec3f*(vec: Vec4f): Vec3f =
   result[1] = vec[1]
   result[2] = vec[2]
   result[3] = vec[3]
-proc vec4f*(x,y,z,w: float32): TVec4f =
+proc vec4f*(x,y,z,w: float32): Vec4f =
   result.data = [x,y,z,w]
-proc vec4f*(v: TVec3f, w: float32): TVec4f =
+proc vec4f*(v: Vec3f, w: float32): Vec4f =
   result.data = [v[1], v[2], v[3], w]
-proc vec4*[T](x,y,z,w: T): TVec4[T] =
+proc vec4*[T](x,y,z,w: T): Vec4[T] =
   result.data = [x,y,z,w]
-proc vec4*[T](v: TVec3[T], w: T): TVec4[T] =
+proc vec4*[T](v: Vec3[T], w: T): Vec4[T] =
   result.data = [v[1], v[2], v[3], w]
 
 
-proc rows*(mtx: TMatrix): int = TMatrix.N
-proc cols*(mtx: TMatrix): int = TMatrix.M
+proc rows*(mtx: Matrix): int = Matrix.N
+proc cols*(mtx: Matrix): int = Matrix.M
 proc identity*[T](): T =
   for i in 1..rows(result):
     result[i,i] = 1.float32
-proc dot*(a, b: TVec): TVec.T =
+proc dot*(a, b: Vector): Vector.T =
   #FIXME: perhaps this should return a float
   #assert(a.data.len == b.data.len)
-  for i in 1..TVec.N:
+  for i in 1..Vector.N:
     result += a[i] * b[i]
-proc length*(a: TVec): float =
+proc length*(a: Vector): float =
   result = sqrt(dot(a,a).float)
-proc row*(a: TMatrix; i: int): auto =
-  var result: TVec[TMatrix.M, TMatrix.T]
-  for idx in 1..TMatrix.M:
+proc row*(a: Matrix; i: int): auto =
+  var result: Vector[Matrix.M, Matrix.T]
+  for idx in 1..Matrix.M:
     result[idx] = a[i,idx]
   return result
-proc col*(a: TMatrix; j: int): auto =
-  var result: TVec[TMatrix.N, TMatrix.T]
-  for idx in 1..TMatrix.N:
+proc col*(a: Matrix; j: int): auto =
+  var result: Vector[Matrix.N, Matrix.T]
+  for idx in 1..Matrix.N:
     result[idx] = a[idx, j]
   return result
-proc `/`*(a: TMatrix, c: float): TMatrix =
-  for i in 1..TMatrix.N:
-    for j in 1..TMatrix.M:
+proc `/`*(a: Matrix, c: float): Matrix =
+  for i in 1..Matrix.N:
+    for j in 1..Matrix.M:
       result[i,j] = a[i,j] / c
-proc sub*[N: static[int]; M: static[int]; T](self: TMatrix[N,M,T,ColMajor]; r,c: int): auto =
+proc sub*[N: static[int]; M: static[int]; T](self: Matrix[N,M,T,ColMajor]; r,c: int): auto =
   ## returns a submatrix of `self`, that is
   ## we delete the ith row and jth column
   ## and return the resulting matrix
-  var result: TMatrix[N - 1, M - 1, T, ColMajor]
+  var result: Matrix[N - 1, M - 1, T, ColMajor]
   for i in 1..N-1:
     for j in 1..M-1:
       #we just handle the four cases here
@@ -167,9 +167,9 @@ proc sub*[N: static[int]; M: static[int]; T](self: TMatrix[N,M,T,ColMajor]; r,c:
       elif j >= c: result[i,j] = self[i, j+1]
       else: result[i,j] = self[i,j]
   return result
-proc transpose*(a: TMatrix): TMatrix =
-  for i in 1..TMatrix.N:
-    for j in 1..TMatrix.M:
+proc transpose*(a: Matrix): Matrix =
+  for i in 1..Matrix.N:
+    for j in 1..Matrix.M:
       result[i,j] = a[j,i]
 
 proc det*(a: SquareMatrix): float =
@@ -181,136 +181,136 @@ proc det*(a: SquareMatrix): float =
       result += sgn * a[i,1] * det(a.sub(i,1))
 
 discard """
-proc det2*(a: TMat2f): float =
+proc det2*(a: Mat2f): float =
   result = (a[1,1] * a[2,2]) - (a[1,2] * a[2,1])
-proc det*(a: TMat3f): float =
+proc det*(a: Mat3f): float =
   for i in 1..3:
     var sgn = pow((-1).float, (i + 1).float)
     result += sgn * a[i,1] * det2(a.sub(i,1))
 """
-proc adj*(a: TMatrix): TMatrix =
-  for i in 1..TMatrix.N:
-    for j in 1..TMatrix.M:
+proc adj*(a: Matrix): Matrix =
+  for i in 1..Matrix.N:
+    for j in 1..Matrix.M:
       var sgn = pow((-1).float, (i+j).float)
       result[j,i] = sgn * det(a.sub(i,j))
 discard """
-proc adj*(a: TMat4f): TMat4f =
+proc adj*(a: Mat4f): Mat4f =
   for i in 1..4:
     for j in 1..4:
       var sgn = pow((-1).float, (i+j).float)
       result[i,j] = sgn * det(a.sub(j,i))
 """
-proc inverse*(a: TMatrix): TMatrix =
+proc inverse*(a: Matrix): Matrix =
   result = adj(a) / det(a)
 proc trace*(a: SquareMatrix): float =
   for i in 1..SquareMatrix.N:
     result += a[i,i]
-proc initMat3f*(arrs: array[0..8, float32]): TMat3f =
+proc iniMat3f*(arrs: array[0..8, float32]): Mat3f =
   result.data = arrs
   result = transpose(result)
-proc initMat2f*(arrs: array[0..3, float32]): TMat2f =
+proc iniMat2f*(arrs: array[0..3, float32]): Mat2f =
   result.data = arrs
   result = transpose(result)
-proc mat3f*(mat: TMat4f): TMat3f =
+proc mat3f*(mat: Mat4f): Mat3f =
   for i in 1..3:
     for j in 1..3:
       result[i,j] = mat[i,j]
 discard """
-proc `$`*(a: TMat3f): string =
+proc `$`*(a: Mat3f): string =
   result = formatFloat(a[1,1]) & " " & formatFloat(a[1,2]) & formatFloat(a[1,3]) & "\n" &
            formatFloat(a[2,1]) & " " & formatFloat(a[2,2]) & formatFloat(a[2,3]) & "\n" &
            formatFloat(a[3,1]) & " " & formatFloat(a[3,2]) & formatFloat(a[3,3])
 """
-proc `$`*(a: TMatrix): string =
+proc `$`*(a: Matrix): string =
   result = ""
-  for i in 1..TMatrix.N:
-    for j in 1..TMatrix.M:
+  for i in 1..Matrix.N:
+    for j in 1..Matrix.M:
       result &= formatFloat(a[i,j]) & " "
     result &= "\n"
-proc mul*(a: TMat4f; b: TMat4f): TMat4f =
+proc mul*(a: Mat4f; b: Mat4f): Mat4f =
   for i in 1..4:
     for j in 1..4:
       result[i,j] = dot(row(a,i), col(b,j))
-proc mulv*(a: TMat3f, b: TVec3f): TVec3f =
+proc mulv*(a: Mat3f, b: Vec3f): Vec3f =
   for i in 1..3:
     result[i] = dot(a.row(i), b)
-proc mul4v*(a: TMat4f, v: TVec4f): TVec4f =
+proc mul4v*(a: Mat4f, v: Vec4f): Vec4f =
   for i in 1..4:
     result[i] = dot(a.row(i), v)
-proc mul3v*(a: TMat4f, b: TVec3f): TVec3f =
+proc mul3v*(a: Mat4f, b: Vec3f): Vec3f =
   result = vec3f(mul4v(a, vec4f(b, 1)))
-proc mul3vd*(a: TMat4f, b: TVec3f): TVec3f =
+proc mul3vd*(a: Mat4f, b: Vec3f): Vec3f =
   ## treats the input as a direction, not as a position
   result = vec3f(mul4v(a, vec4f(b, 0)))
 discard """
-proc mul*(a: TMat3f; b: TMat3f): TMat3f =
+proc mul*(a: Mat3f; b: Mat3f): Mat3f =
   for i in 1..3:
     for j in 1..3:
       result[i,j] = dot(row(a,i), col(b,j))
 """
-proc `==`*(a: TMatrix; b: TMatrix): bool =
+proc `==`*(a: Matrix; b: Matrix): bool =
   result = a.data == b.data
-proc identity4f*(): TMat4f =
+proc identity4f*(): Mat4f =
   for i in 1..4:
     result[i,i] = 1'f32
-proc identity3f*(): TMat3f =
+proc identity3f*(): Mat3f =
   for i in 1..3:
     result[i,i] = 1'f32
 #vector only code
-proc x*(a: TVec): TVec.T = a[1]
-proc y*(a: TVec): TVec.T = a[2]
-proc z*(a: TVec): TVec.T = a[3]
-proc w*(a: TVec): TVec.T = a[4]
-proc `x=`*(a: var TVec, val: TVec.T) = a[1] = val
-proc `y=`*(a: var TVec, val: TVec.T) = a[2] = val
-proc `z=`*(a: var TVec, val: TVec.T) = a[3] = val
-proc `w=`*(a: var TVec, val: TVec.T) = a[4] = val
-proc xyz*(a: TVec4f): TVec3f = vec3f(a.x, a.y, a.z)
-proc norm*(a: TVec): float =
+proc x*(a: Vector): Vector.T = a[1]
+proc y*(a: Vector): Vector.T = a[2]
+proc z*(a: Vector): Vector.T = a[3]
+proc w*(a: Vector): Vector.T = a[4]
+proc `x=`*(a: var Vector, val: Vector.T) = a[1] = val
+proc `y=`*(a: var Vector, val: Vector.T) = a[2] = val
+proc `z=`*(a: var Vector, val: Vector.T) = a[3] = val
+proc `w=`*(a: var Vector, val: Vector.T) = a[4] = val
+proc xyz*(a: Vec4f): Vec3f = vec3f(a.x, a.y, a.z)
+proc norm*(a: Vector): float =
   sqrt(dot(a,a))
-proc normalize*(a: TVec): TVec =
+proc normalize*(a: Vector): Vector =
   result = a / norm(a)
-proc `+`*(a, b: TVec): TVec =
-  for i in 1..TVec.N:
+proc `+`*(a, b: Vector): Vector =
+  for i in 1..Vector.N:
     result[i] = a[i] + b[i]
-proc `+=`*(a: var TVec, b: TVec) =
+proc `+=`*(a: var Vector, b: Vector) =
   a = a+b
-proc `-`*(a, b: TVec): TVec =
-  for i in 1..TVec.N:
+proc `-`*(a, b: Vector): Vector =
+  for i in 1..Vector.N:
     result[i] = a[i] - b[i]
-proc `-`*(a: TVec, c: float): TVec =
-  for i in 1..TVec.N:
+proc `-`*(a: Vector, c: float): Vector =
+  for i in 1..Vector.N:
     result[i] = a[i] - c
-proc `*`*(a: TVec, b: float): TVec =
-  for i in 1..TVec.N:
+proc `*`*(a: Vector, b: float): Vector =
+  for i in 1..Vector.N:
     result[i] = a[i] * b
-proc `*`*(b: float, a: TVec): TVec = a * b
-proc `<`*(a: TVec, b: TVec): bool =
+proc `*`*(b: float, a: Vector): Vector = a * b
+proc `<`*(a: Vector, b: Vector): bool =
   result = true
-  for i in 1..TVec.N:
+  for i in 1..Vector.N:
     if a[i] >= b[i]:
       return false
-proc `<=`*(a: TVec, b: TVec): bool =
+proc `<=`*(a: Vector, b: Vector): bool =
   result = true
-  for i in 1..TVec.N:
+  for i in 1..Vector.N:
     if a[i] > b[i]:
       return false
-proc dist*(a,b: TVec): float =
+proc dist*(a,b: Vector): float =
   result = norm(a - b)
-proc formatVec3f*(a: TVec3f): string {.noSideEffect.} =
+proc formaVec3f*(a: Vec3f): string {.noSideEffect.} =
   result  =  "x: " & formatFloat(a[1])
   result &= " y: " & formatFloat(a[2])
   result &= " z: " & formatFloat(a[3])
-proc formatVec4f*(a: TVec4f): string {.noSideEffect.} =
+proc formaVec4f*(a: Vec4f): string {.noSideEffect.} =
   result  =  "x: " & formatFloat(a[1])
   result &= " y: " & formatFloat(a[2])
   result &= " z: " & formatFloat(a[3])
   result &= " w: " & formatFloat(a[4])
-proc cross*(u,v: TVec3f): TVec3f =
+proc cross*(u,v: Vec3f): Vec3f =
   result.x = (u.y * v.z) - (u.z * v.y)
   result.y = (u.z * v.x) - (u.x * v.z)
   result.z = (u.x * v.y) - (u.y * v.x)
-proc extrema*(vecs: varargs[TVec3f]): tuple[min,max: TVec3f] =
+proc extrema*(vecs: varargs[Vec3f]): tuple[min,max: Vec3f] =
   result.min.x = Inf
   result.min.y = Inf
   result.min.z = Inf
@@ -327,25 +327,25 @@ proc extrema*(vecs: varargs[TVec3f]): tuple[min,max: TVec3f] =
 
 
 #transform related code
-proc toAffine*(a: TMat3f): TMat4f =
-  for i in 1..TMat3f.N:
-    for j in 1..TMat3f.M:
+proc toAffine*(a: Mat3f): Mat4f =
+  for i in 1..Mat3f.N:
+    for j in 1..Mat3f.M:
       result[i,j] = a[i,j]
   result[4,4] = 1'f32
-proc fromAffine*(a: TMat4f): TMat3f =
+proc fromAffine*(a: Mat4f): Mat3f =
   for i in 1..3:
     for j in 1..3:
       result[i,j] = a[i,j]
-proc toTranslationMatrix*(v: TVec3f): TMat4f =
+proc toTranslationMatrix*(v: Vec3f): Mat4f =
   result = identity4f()
   result[1,4] = v[1]
   result[2,4] = v[2]
   result[3,4] = v[3]
-proc fromTranslationMtx*(m: TMat4f): TVec3f =
+proc fromTranslationMtx*(m: Mat4f): Vec3f =
   result[1] = m[1,4]
   result[2] = m[2,4]
   result[3] = m[3,4]
-proc unProject*(win: TVec3f; mtx: TMat4f, viewport: TVec4f): TVec3f =
+proc unProject*(win: Vec3f; mtx: Mat4f, viewport: Vec4f): Vec3f =
   var inversevp = inverse(mtx)
   var tmp = vec4f(win, 1'f32)
   tmp[1] = (tmp[1] - viewport[1]) / viewport[3]
@@ -354,10 +354,10 @@ proc unProject*(win: TVec3f; mtx: TMat4f, viewport: TVec4f): TVec3f =
   var obj = mul4v(inversevp, tmp)
   obj = obj / obj[4]
   result = vec3f(obj[1], obj[2], obj[3])
-proc unProject*(win: TVec3f; view, proj: TMat4f; viewport: TVec4f): TVec3f =
+proc unProject*(win: Vec3f; view, proj: Mat4f; viewport: Vec4f): Vec3f =
   unProject(win, mul(proj, view), viewport)
 #projection related code
-proc CreateOrthoMatrix*(min, max: TVec3f): TMat4f =
+proc CreateOrthoMatrix*(min, max: Vec3f): Mat4f =
   var sx = 2 / (max.x - min.x)
   var sy = 2 / (max.y - min.y)
   var sz = 2 / (max.z - min.z)
@@ -368,9 +368,9 @@ proc CreateOrthoMatrix*(min, max: TVec3f): TMat4f =
                  0,  sy,  0,    0,
                  0,  0,   sz,   0,
                  tx,  ty, tz,   1]
-proc CreateOrthoMatrix*(box: TAlignedBox3f): TMat4f =
+proc CreateOrthoMatrix*(box: TAlignedBox3f): Mat4f =
   result = CreateOrthoMatrix(box.min, box.max)
-proc CreateOrthoMatrix*(left, right, bottom, top, near, far: float32): TMat4f =
+proc CreateOrthoMatrix*(left, right, bottom, top, near, far: float32): Mat4f =
   ## this works just like glOrtho
   result.data = [2/(right - left), 0, 0, 0,
                  0, 2/(top-bottom), 0, 0,
@@ -400,7 +400,7 @@ proc `/`*(q: TQuatf, s: float): TQuatf =
   result.w = q.w / s
 proc `/`*(q: TQuatf, s: float32): TQuatf = q / s.float
 proc quatf*(w,i,j,k: float32): TQuatf = [w,i,j,k].TQuatf
-proc toVector(q: TQuatf): TVec4f =
+proc toVector(q: TQuatf): Vec4f =
   result.data = array[0..3, float32](q)
 proc norm*(q: TQuatf): float = norm(toVector(q))
 proc normalize*(q: TQuatf): TQuatf = q / norm(q)
@@ -418,7 +418,7 @@ proc mul*(p: TQuatf; q: TQuatf): TQuatf =
   result[3] = p.w * q.y + p.y * q.w + p.z * q.x - p.x * q.z;
   result[4] = p.w * q.z + p.z * q.w + p.x * q.y - p.y * q.x;
 
-proc mulv*(q: TQuatf; v: TVec3f): TVec3f =
+proc mulv*(q: TQuatf; v: Vec3f): Vec3f =
   var qv = quatf(0, v.x, v.y, v.z)
   var prod = mul(q, mul(qv, conj(q)))
   result = vec3f(prod.i, prod.j, prod.k)
@@ -428,7 +428,7 @@ proc mul*(p: TQuatf; a: TAlignedBox3f): TAlignedBox3f =
   for i in 1..3:
     result.min[i] = min(a.min[i], rotmin[i])
     result.max[i] = max(a.max[i], rotmax[i])
-proc toRotMatrix*(q: TQuatf): TMat3f =
+proc toRoMatrix*(q: TQuatf): Mat3f =
   #this code is ported from Eigen
   #pretty much directly
   if not(norm(q) <= 1.1'f32 and norm(q) >= 0.9'f32):
@@ -455,7 +455,7 @@ proc toRotMatrix*(q: TQuatf): TMat3f =
   result[3,1] = txz-twy
   result[3,2] = tyz+twx
   result[3,3] = float32(1)-(txx+tyy)
-proc fromRotMatrix*(m: TMat3f): TQuatf =
+proc fromRoMatrix*(m: Mat3f): TQuatf =
   ## convert a rotation matrix into a quaternion
   ## this algorithm comes from the Eigen linear algebra
   ## library which in turn credits it to Ken Shoemake
@@ -483,17 +483,17 @@ proc fromRotMatrix*(m: TMat3f): TQuatf =
     result.w = (m[k,j] - m[j,k]) * t
     result[j] = (m[j,i] + m[i,j]) * t
     result[k] = (m[k,i] + m[i,k]) * t
-proc toOrbitRotMatrix*(q: TQuatf, pos: TVec3f): TMat4f =
+proc toOrbitRoMatrix*(q: TQuatf, pos: Vec3f): Mat4f =
   result = toTranslationMatrix(-1 * pos)
-  result = mul(result, toAffine(toRotMatrix(q)))
+  result = mul(result, toAffine(toRoMatrix(q)))
   result = mul(result, toTranslationMatrix(pos))
-proc quatFromAngleAxis*(angle: float; axis: TVec3f): TQuatf =
+proc quatFromAngleAxis*(angle: float; axis: Vec3f): TQuatf =
   var vecScale = sin(0.5 * angle)
   result[2] = axis[1] * vecScale
   result[3] = axis[2] * vecScale
   result[4] = axis[3] * vecScale
   result[1] = cos(0.5 * angle)
-proc quatFromTwoVectors*(v,w: TVec3f): TQuatf =
+proc quatFromTwoVectors*(v,w: Vec3f): TQuatf =
   var v = normalize(v)
   var w = normalize(w)
   var c = normalize(cross(v,w))
@@ -518,7 +518,7 @@ proc encloses*(aabb: TAlignedBox3f, target: TAlignedBox3f): bool =
   if (target.min >= aabb.min) and (target.max <= aabb.max):
     return true
   return false
-proc extend*(aabb: var TAlignedBox3f, target: TVec3f) =
+proc extend*(aabb: var TAlignedBox3f, target: Vec3f) =
   for i in 1..3:
     if target[i] < aabb.min[i]: aabb.min[i] = target[i]
     if target[i] > aabb.max[i]: aabb.max[i] = target[i]
@@ -527,7 +527,7 @@ proc extend*(aabb: var TAlignedBox3f, target: TAlignedBox3f) =
     if target.min[i] < aabb.min[i]: aabb.min[i] = target.min[i]
     if target.max[i] > aabb.max[i]: aabb.max[i] = target.max[i]
   #assert(target in aabb)
-proc corner*(aabb: TAlignedBox3f, which: TCornerType): TVec3f =
+proc corner*(aabb: TAlignedBox3f, which: TCornerType): Vec3f =
   var mult = 1.uint
   for i in 1..3:
     if (mult and which.uint) > 0.uint: result[i] = aabb.max[i]
@@ -552,14 +552,14 @@ proc split*(aabb: TAlignedBox3f): array[1..8, TAlignedBox3f] =
   split(result[2], axisXY, result[2], result[6])
   split(result[3], axisXY, result[3], result[7])
   split(result[4], axisXY, result[4], result[8])
-proc centroid*(aabb: TAlignedBox3f): TVec3f =
+proc centroid*(aabb: TAlignedBox3f): Vec3f =
   result = (aabb.min + aabb.max) / 2
-proc mulArea*(aabb: TAlignedBox3f, mat: TMat4f): TAlignedBox3f =
+proc mulArea*(aabb: TAlignedBox3f, mat: Mat4f): TAlignedBox3f =
   ## multiplies the aabb by the matrix and preserves the area
   ## this means that it is not "real" matrix multiplication, but
   ## rather multiplication of each corner of the AABB by the matrix
   ## followed by a reconstruction of the aabb
-  var transformedPoints: array[1..8, TVec3f]
+  var transformedPoints: array[1..8, Vec3f]
   for i in 1..8:
     var corner = aabb.corner(TCornerType(i-1))
     transformedPoints[i] = vec3f(mul4v(mat, vec4f(corner, 1)))
@@ -567,7 +567,7 @@ proc mulArea*(aabb: TAlignedBox3f, mat: TMat4f): TAlignedBox3f =
   result.min = minmax.min
   result.max = minmax.max
 proc `$`*(aabb: TAlignedBox3f): string {.noSideEffect.} =
-  result = "min: " & formatVec3f(aabb.min) & "\nmax: " & formatVec3f(aabb.max)
+  result = "min: " & formaVec3f(aabb.min) & "\nmax: " & formaVec3f(aabb.max)
 
 #this ray has more information
 #than TRay, for fast slope based intersections
@@ -812,15 +812,15 @@ proc intersects*(r: TRay, b: TAlignedBox3f): bool =
   result = intersects(Precompute_Ray(r), b)
 # frustum related code, for culling and
 # other stuff
-type TPlane* = distinct TVec4f
-type TNormalPlane* = distinct TVec4f
-proc extractPlane*(matrix: TMat4f, side, sign: int): TPlane =
+type TPlane* = distinct Vec4f
+type TNormalPlane* = distinct Vec4f
+proc extractPlane*(matrix: Mat4f, side, sign: int): TPlane =
   ## extract a frustum plane from a matrix
   ## the side and sign parameters determine
   ## which row vector is used and weather it is added
   ## or subtracted from the last row vector
   result = TPlane(matrix.row(4) + float(sign)*matrix.row(side))
-proc extractPlane*(matrix: TMat4f, plane: int): TPlane =
+proc extractPlane*(matrix: Mat4f, plane: int): TPlane =
   assert(plane > 0)
   assert(plane < 7)
   var sgn = plane mod 2
@@ -828,16 +828,16 @@ proc extractPlane*(matrix: TMat4f, plane: int): TPlane =
   else: sgn = 1
   result = extractPlane(matrix, (plane div 2) + 1, sgn)
 proc toHessianNormalForm*(plane: TPlane): TNormalPlane =
-  var asq = pow(TVec4f(plane).x, 2)
-  var bsq = pow(TVec4f(plane).y, 2)
-  var csq = pow(TVec4f(plane).z, 2)
+  var asq = pow(Vec4f(plane).x, 2)
+  var bsq = pow(Vec4f(plane).y, 2)
+  var csq = pow(Vec4f(plane).z, 2)
   var denom = sqrt(asq + bsq + csq)
-  result = (plane.TVec4f / denom).TNormalPlane
-proc distance(plane: TNormalPlane, point: TVec3f): float =
-  var plane = plane.TVec4f
+  result = (plane.Vec4f / denom).TNormalPlane
+proc distance(plane: TNormalPlane, point: Vec3f): float =
+  var plane = plane.Vec4f
   var normVec = vec3f(plane.x, plane.y, plane.z)
   result = dot(normVec, point) + plane.w
-proc frustumContains*(frustum: TMat4f, box: TAlignedBox3f): bool =
+proc frustumContains*(frustum: Mat4f, box: TAlignedBox3f): bool =
   result = true
   for i in 1..6:
     var numOut: int = 0
@@ -858,7 +858,7 @@ const XSwiz = {'x', 'r', 'u' }
 const YSwiz = {'y', 'g', 'v' }
 const ZSwiz = {'z', 'b', 'w' }
 const WSwiz = {'w', 'a'}
-proc `.`*[N: static[int]; T](self: TVec[N, T]; field: static[string]): TVec[field.len, T] =
+proc `.`*[N: static[int]; T](self: Vector[N, T]; field: static[string]): Vector[field.len, T] =
   for i in 1..field.len:
     if field[i-1] in XSwiz:
       result[i] = self[1]
@@ -870,7 +870,7 @@ proc `.`*[N: static[int]; T](self: TVec[N, T]; field: static[string]): TVec[fiel
       result[i] = self[4]
 """
 #directly graphics related functions, like ports of glu stuff and the like,
-proc LookAt*(eye, center, up: TVec3f): TMat4f =
+proc LookAt*(eye, center, up: Vec3f): Mat4f =
   ## makes a viewing matrix that looks at a given object from a given center
   ## and "up" point, this works like gluLookAt but returns a matrix instead
   ## of messing with the old matrix stack.
@@ -913,9 +913,9 @@ when isMainModule:
     aabb.extend(av)
     check(aabb.max == av)
   test "TDotProduct":
-    var av: TVec3f
+    var av: Vec3f
     av.data = [1.0'f32, 2.0'f32, 0.0'f32]
-    var bv: TVec3f
+    var bv: Vec3f
     bv.data = [0.0'f32, 5.0'f32, 1.0'f32]
     var cv = dot(av,bv)
     check(cv == 10.0'f32)
@@ -925,81 +925,88 @@ when isMainModule:
     var c = cross(a,b)
     check(c == vec3f(0,0,1))
   test "TRow":
-    var ta: TMat4f
+    var ta: Mat4f
     ta[1,1] = 1.0'f32
     var tr = ta.row(1)
     check(tr.data == [1'f32, 0'f32, 0'f32, 0'f32])
   test "TColumn":
-    var ta: TMat4f
+    var ta: Mat4f
     ta[1,1] = 1.0'f32
     var tc = ta.col(1)
     check(tc.data == [1.0'f32, 0.0'f32, 0.0'f32, 0.0'f32])
   test "TMul":
-    var ta: TMat4f
+    var ta: Mat4f
     ta[1,2] = 2.0'f32
-    var tb: TMat4f
+    var tb: Mat4f
     tb[2,1] = 2.0'f32
   #  discard mul(ta, tb)
-  test "TestMat3f":
-    var tm3: TMat3f
+  test "TesMat3f":
+    var tm3: Mat3f
     var tm4 = toAffine(tm3)
     check(tm4[4,4] == 1.0'f32)
   test "Test Construct":
     #I actually had a bug where constructors just stopped working
-    var vec4: TVec4f = vec4f(1.0'f32, 1.0'f32, 1.0'f32, 1.0'f32)
+    var vec4: Vec4f = vec4f(1.0'f32, 1.0'f32, 1.0'f32, 1.0'f32)
     check(vec4.data == [1.0'f32, 1.0'f32, 1.0'f32, 1.0'f32])
   test "TSub":
-    var a = initMat3f([1'f32,2'f32,3'f32,
+    var a = iniMat3f([1'f32,2'f32,3'f32,
                        4'f32,5'f32,6'f32,
                        7'f32,8'f32,9'f32])
-    var c = initMat2f([1'f32, 3'f32,
+    var c = iniMat2f([1'f32, 3'f32,
                        7'f32, 9'f32])
-    var b:TMat2f = a.sub(2,2)
+    var b:Mat2f = a.sub(2,2)
     var e:bool = b == c
     check(e)
   test "TDet2x2":
-    var a = initMat2f([1'f32,2'f32,3'f32,4'f32])
+    var a = iniMat2f([1'f32,2'f32,3'f32,4'f32])
     var da = det(a)
     check(da == -2'f32)
   test "TDet3x3f":
-    var a = initMat3f([1'f32, 2'f32, 3'f32,
+    var a = iniMat3f([1'f32, 2'f32, 3'f32,
                        4'f32, 5'f32, 6'f32,
                        7'f32, 8'f32, 9'f32])
     var da = det(a)
     check(da == 0.0)
   test "TAdj3x3":
-    var a = initMat3f([1'f32, 2'f32, 3'f32,
+    var a = iniMat3f([1'f32, 2'f32, 3'f32,
                        4'f32, 5'f32, 6'f32,
                        7'f32, 8'f32, 9'f32])
     var aj = adj(a)
-    var b = initMat3f([-3'f32, 6'f32, -3'f32,
+    var b = iniMat3f([-3'f32, 6'f32, -3'f32,
                         6'f32, -12'f32, 6'f32,
                         -3'f32, 6'f32, -3'f32])
     var e = aj == b
     check(e)
   test "TMatToQuat1":
     var rot = quatFromAngleAxis(0.5, vec3f(1,0,0))
-    var mtx = toRotMatrix(rot)
-    var newRot = fromRotMatrix(mtx)
+    var mtx = toRoMatrix(rot)
+    var newRot = fromRoMatrix(mtx)
     check(newRot == rot)
 
-  test "TMatrixInverse4x4":
+  test "MatrixInverse4x4":
     var rot = quatFromAngleAxis(0.5, vec3f(1,0,0))
-    var mtx = toRotMatrix(rot).toAffine()
+    var mtx = toRoMatrix(rot).toAffine()
     var inv = inverse(mtx)
     var transpose = transpose(mtx)
     check(inv == transpose)
-  test "TMatrixInverse3x3":
+  test "MatrixInverse3x3":
     var rot = quatFromAngleAxis(0.5, vec3f(1,0,0))
-    var mtx = toRotMatrix(rot)
+    var mtx = toRoMatrix(rot)
     var inv = inverse(mtx)
     var trans = transpose(mtx)
     check(inv == trans)
   discard """
   test "TSwizzle":
-    var ta: TVec3f = TVec3f(data: [1.0'f32, 2.0'f32, 3.0'f32])
-    check(ta.xxx == TVec3f(data: [1.0'f32, 1.0'f32, 1.0'f32] ))
+    var ta: Vec3f = Vec3f(data: [1.0'f32, 2.0'f32, 3.0'f32])
+    check(ta.xxx == Vec3f(data: [1.0'f32, 1.0'f32, 1.0'f32] ))
   """
+  test "TOldNameVectorDot":
+    var av: TVec3f
+    av.data = [1.0'f32, 2.0'f32, 0.0'f32]
+    var bv: TVec3f
+    bv.data = [0.0'f32, 5.0'f32, 1.0'f32]
+    var cv = dot(av,bv)
+    check(cv == 10.0'f32)
   #check(prod[1,1] == 8.0'f32)
   #check(prod[1,2] == 5.0'f32)
   #check(prod[2,1] == 20.0'f32)
