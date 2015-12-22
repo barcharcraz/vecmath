@@ -22,19 +22,6 @@
 
 ## This file implements a dynamic matrix class
 import matrixOptions
-type DynamicMatrix*[T; O: Options] = object
-  data*: seq[T]
-  rows: int
-  cols: int
-type
-  MatX*[T] = DynamicMatrix[T, ColMajor]
-  MatXf* = MatX[float32]
-  MatXd* = MatX[float]
-  MatXi* = MatX[int]
-proc matX*[T](rows, cols: int): MatX[T] =
-  result.rows = rows
-  result.cols = cols
-  result.data = newSeq(rows * cols)
 
 #subscript indexing
 proc `[]`*(self: DynamicMatrix, i,j: int): self.T =
@@ -45,10 +32,10 @@ proc `[]`*(self: DynamicMatrix, i,j: int): self.T =
     var idx = (self.rows * (j-1)) + (i-1)
     result = self.data[idx]
 
-proc `[]=`*(self: DynamicMatrix; i,j: int; val: DynamicMatrix.T) =
+proc `[]=`*(self: var DynamicMatrix; i,j: int; val: DynamicMatrix.T) =
   when self.O is RowMajor:
     var idx = (self.cols * (i-1)) + (j-1)
     self.data[idx] = val
-  when Matrix.O is ColMajor:
+  when self.O is ColMajor:
     var idx = (self.rows * (j-1)) + (i-1)
     self.data[idx] = val

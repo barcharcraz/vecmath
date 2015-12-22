@@ -22,19 +22,28 @@
 import math
 import strutils
 import private/intrinsic
-import private/matrixOptions
-import private/dynMatrix
-export private/dynMatrix
 {.experimental.}
-
+type ColMajor* = object
+type RowMajor* = object
+type Options* = concept x
+  x is ColMajor or
+    x is RowMajor
 type Matrix*[N: static[int]; M: static[int]; T; O: Options] = object
   data*: array[0..M*N-1, T]
+type DynamicMatrix*[T; O: Options] = object
+  data*: seq[T]
+  rows: int
+  cols: int
 type TMatrix = Matrix
+type AnyMatrix = Matrix or DynamicMatrix
 type
   SquareMatrix[N: static[int]; T] = Matrix[N,N,T,ColMajor]
 
+
+
 type
   Vector*[N: static[int]; T] = Matrix[N, 1, T, ColMajor]
+  Vec2*[T] = Vector[2, T]
   Vec3*[T] = Vector[3, T]
   Vec4*[T] = Vector[4, T]
   Vecf*[N: static[int]] = Matrix[N, 1, float32, ColMajor]
@@ -49,6 +58,8 @@ type
   Vec4f* = Matrix[4, 1, float32, ColMajor]
   Vec3f* = Matrix[3, 1, float32, ColMajor]
   Vec2f* = Matrix[2, 1, float32, ColMajor]
+  Vec2d* = Matrix[2, 1, float, ColMajor]
+  Vec2i* = Matrix[2, 1, int, ColMajor]
   Quatf* = distinct array[1..4, float32] #poor man's quaternion
 
   TVec* {.deprecated.} = Vector
@@ -67,6 +78,13 @@ type
   TVec3f* {.deprecated.} = Vec3f
   TVec2f* {.deprecated.} = Vec2f
   TQuatf* {.deprecated.} = Quatf
+
+type
+  MatX*[T] = DynamicMatrix[T, ColMajor]
+  MatXf* = MatX[float32]
+  MatXd* = MatX[float]
+  MatXi* = MatX[int]
+
 type
   TAlignedBox3f* = object
     min*: Vec3f
@@ -87,28 +105,57 @@ type TAxis* = enum
 type TRay* = object
   dir*: Vec3f
   origin*: Vec3f
-proc `[]=`*(self: var Matrix; i,j: int; val: Matrix.T) =
-  when Matrix.O is RowMajor:
-    var idx = (Matrix.M * (i-1)) + (j-1)
+proc rows*(mtx: Matrix): int = Matrix.N
+proc cols*(mtx: Matrix): int = Matrix.M
+proc rows*(mtx: DynamicMatrix): int = mtx.rows
+proc cols*(mtx: DynamicMatrix): int = mtx.cols
+
+proc `[]=`*(self: var Matrix; i,j: int; val: self.T) =
+  when self.O is RowMajor:
+    var idx = (cols(self) * (i-1)) + (j-1)
     self.data[idx] = val
-  when Matrix.O is ColMajor:
-    var idx = (Matrix.N * (j-1)) + (i-1)
+  when self.O is ColMajor:
+    var idx = (cols(self) * (j-1)) + (i-1)
     self.data[idx] = val
 
-proc `[]`*(self: Matrix; i,j: int): Matrix.T =
-  when Matrix.O is RowMajor:
-    var idx = (Matrix.M * (i-1)) + (j-1)
+proc `[]`*(self: Matrix; i,j: int): self.T =
+  when self.O is RowMajor:
+    var idx = (cols(self) * (i-1)) + (j-1)
     result = self.data[idx]
-  when Matrix.O is ColMajor:
-    var idx = (Matrix.N * (j-1)) + (i-1)
+  when self.O is ColMajor:
+    var idx = (rows(self) * (j-1)) + (i-1)
     result = self.data[idx]
+
+#subscript indexing for dynamic matricies
+proc `[]`*(self: DynamicMatrix, i,j: int): self.T =
+  when self.O is RowMajor:
+    var idx = (self.cols * (i-1)) + (j-1)
+    result = self.data[idx]
+  when self.O is ColMajor:
+    var idx = (self.rows * (j-1)) + (i-1)
+    result = self.data[idx]
+
+proc `[]=`*(self: var DynamicMatrix; i,j: int; val: DynamicMatrix.T) =
+  when self.O is RowMajor:
+    var idx = (self.cols * (i-1)) + (j-1)
+    self.data[idx] = val
+  when self.O is ColMajor:
+    var idx = (self.rows * (j-1)) + (i-1)
+    self.data[idx] = val
+
 proc `[]`*(self: Vector; i: int): Vector.T =
   result = self[i, 1]
 proc `[]=`*(self: var Vector; i: int; val: Vector.T) =
   self[i, 1] = val
 
+proc vec2*[T](x,y: T): Vec2[T] =
+  result.data = [x,y]
+proc vec2i*(x,y: int): Vec2i = vec2(x,y)
+proc vec2d*(x,y: float): Vec2d = vec2(x,y)
 proc vec2f*(x,y: float32): Vec2f =
   result.data = [x,y]
+proc vec3*[T](x,y,z: T): Vec3[T] =
+  result.data = [x, y, z]
 proc vec3f*(x,y,z: float32): Vec3f =
   result.data = [x,y,z]
 proc vec3f*(vec: Vec4f): Vec3f =
@@ -124,9 +171,13 @@ proc vec4*[T](x,y,z,w: T): Vec4[T] =
 proc vec4*[T](v: Vec3[T], w: T): Vec4[T] =
   result.data = [v[1], v[2], v[3], w]
 
+#dynamic matrix constructors
+proc matX*[T](rows, cols: int): MatX[T] =
+  result.rows = rows
+  result.cols = cols
+  result.data = newSeq[T](rows * cols)
+proc matXi*(rows, cols: int): MatXi = matX[int](rows, cols)
 
-proc rows*(mtx: Matrix): int = Matrix.N
-proc cols*(mtx: Matrix): int = Matrix.M
 proc identity*[T](): T =
   for i in 1..rows(result):
     result[i,i] = 1.float32
@@ -170,6 +221,7 @@ proc transpose*(a: Matrix): Matrix =
   for i in 1..Matrix.N:
     for j in 1..Matrix.M:
       result[i,j] = a[j,i]
+
 
 proc det*(a: SquareMatrix): float =
   when SquareMatrix.N == 2:
@@ -227,6 +279,7 @@ proc `$`*(a: Matrix): string =
       result &= formatFloat(a[i,j]) & " "
     result &= "\n"
 proc mul*(a: Mat4f; b: Mat4f): Mat4f =
+  echo "mult matrix"
   for i in 1..4:
     for j in 1..4:
       result[i,j] = dot(row(a,i), col(b,j))
@@ -277,6 +330,7 @@ proc `+=`*(a: var Vector, b: Vector) =
 proc `-`*(a, b: Vector): Vector =
   for i in 1..Vector.N:
     result[i] = a[i] - b[i]
+
 proc `-`*(a: Vector, c: float): Vector =
   for i in 1..Vector.N:
     result[i] = a[i] - c
@@ -294,6 +348,7 @@ proc `<=`*(a: Vector, b: Vector): bool =
   for i in 1..Vector.N:
     if a[i] > b[i]:
       return false
+proc `-`*(a: Vector): Vector = -1 * a
 proc dist*(a,b: Vector): float =
   result = norm(a - b)
 proc formaVec3f*(a: Vec3f): string {.noSideEffect.} =
@@ -376,6 +431,23 @@ proc CreateOrthoMatrix*(left, right, bottom, top, near, far: float32): Mat4f =
                  0, 0, -2 / (far - near), 0,
                  -(right + left)/(right - left), -(top+bottom)/(top-bottom),
                  -2 * ((far + near)/(far - near)), 1]
+proc CreateViewMatrix*(eye, lookat: Vec3f, up = vec3f(0, 1, 0)): Mat4f =
+  var w = (lookat - eye).normalize()
+  w = -w
+  var u = cross(up, w).normalize()
+  var v = cross(w, u)
+  var rotPart: Mat4f
+  rotPart.data = [u.x, v.x, w.x, 0,
+                  u.y, v.y, w.y, 0,
+                  u.z, v.z, w.z, 0,
+                 0,   0,   0,   1]
+  #rotPart = transpose(rotPart)
+  var transPart: Mat4f
+  transPart.data = [1'f32, 0, 0, 0,
+                    0, 1, 0, 0,
+                    0, 0, 1, 0,
+                    -eye.x, -eye.y, -eye.z, 1]
+  result = mul(rotPart, transPart)
 #quaternion related code
 proc `[]`*(self: TQuatf; i: int): float32 = array[1..4, float32](self)[i]
 proc `[]=`*(self: var TQuatf; i: int; val: float32) = array[1..4,float32](self)[i] = val
