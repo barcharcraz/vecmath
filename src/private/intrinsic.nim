@@ -19,6 +19,11 @@
 ## LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 ## OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 ## SOFTWARE.
+when defined(vcc):
+  proc BitScanForward64*(Index: ptr uint32, Mask: int64)
+    {.header: "<intrin.h>", importc: "_BitScanForward64".}
+else:
+  proc BuiltinCtz(x: int64): int32 {.importc: "__builtin_ctzll".}
+  proc BitScanForward64*(Index: ptr uint32, Mask: int64) =
+    Index[] = uint32(BuiltinCtz(Mask))
 
-proc BitScanForward64*(Index: ptr uint32, Mask: int64)
-  {.header: "<intrin.h>", importc: "_BitScanForward64".}
