@@ -132,11 +132,11 @@ proc `/`*(a: TMatrix, c: float): TMatrix =
   for i in 1..TMatrix.N:
     for j in 1..TMatrix.M:
       result[i,j] = a[i,j] / c
-proc sub*(self: TMatrix; r,c: int): auto =
+proc sub*[N: static[int], M: static[int], T, O](self: TMatrix[N,M,T,O]; r,c: int): TMatrix[N-1, M-1, T, O] =
   ## returns a submatrix of `self`, that is
   ## we delete the ith row and jth column
   ## and return the resulting matrix
-  result = TMatrix[TMatrix.N - 1, TMatrix.M - 1, TMatrix.T, TMatrix.O]()
+  #result = TMatrix[TMatrix.N - 1, TMatrix.M - 1, TMatrix.T, TMatrix.O]()
   for i in 1..TMatrix.N-1:
     for j in 1..TMatrix.M-1:
       #we just handle the four cases here
