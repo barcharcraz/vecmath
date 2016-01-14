@@ -281,7 +281,6 @@ proc `$`*(a: Matrix): string =
       result &= formatFloat(a[i,j]) & " "
     result &= "\n"
 proc mul*(a: Mat4f; b: Mat4f): Mat4f =
-  echo "mult matrix"
   for i in 1..4:
     for j in 1..4:
       result[i,j] = dot(row(a,i), col(b,j))
