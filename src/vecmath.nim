@@ -202,13 +202,14 @@ proc `/`*(a: Matrix, c: float): Matrix =
   for i in 1..Matrix.N:
     for j in 1..Matrix.M:
       result[i,j] = a[i,j] / c
-proc sub*[N: static[int], M: static[int], T, O](self: TMatrix[N,M,T,O]; r,c: int): TMatrix[N-1, M-1, T, O] =
+
+proc sub*[N: static[int]; M: static[int]; T; O](self: Matrix[N,M,T,O]; r,c: int): auto =
   ## returns a submatrix of `self`, that is
   ## we delete the ith row and jth column
   ## and return the resulting matrix
-  #result = TMatrix[TMatrix.N - 1, TMatrix.M - 1, TMatrix.T, TMatrix.O]()
-  for i in 1..TMatrix.N-1:
-    for j in 1..TMatrix.M-1:
+  var result: Matrix[N - 1, M - 1, T, O]
+  for i in 1..N-1:
+    for j in 1..M-1:
       #we just handle the four cases here
       #we could be in any one of the four quadrents
       #defined by the row and col we are removing
@@ -217,6 +218,7 @@ proc sub*[N: static[int], M: static[int], T, O](self: TMatrix[N,M,T,O]; r,c: int
       elif j >= c: result[i,j] = self[i, j+1]
       else: result[i,j] = self[i,j]
   return result
+
 proc transpose*(a: Matrix): Matrix =
   for i in 1..Matrix.N:
     for j in 1..Matrix.M:
